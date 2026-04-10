@@ -106,3 +106,60 @@ export async function fetchWeeklyLogs(): Promise<DailyLog[]> {
   }
   return apiFetch('/api/logs?days=7');
 }
+
+// ---- AI Food Analysis ----
+export interface AnalyzedFoodItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+export async function analyzeFoodText(text: string): Promise<AnalyzedFoodItem[]> {
+  if (!USE_API) {
+    // Fallback to local parsing when no API
+    const { parseNaturalLanguageFood, INDIAN_FOOD_DB } = await import('./nutrition');
+    const parsed = parseNaturalLanguageFood(text);
+    if (parsed.length > 0) {
+      return parsed.map(p => {
+        const db = INDIAN_FOOD_DB[p.name];
+        return {
+          name: p.name,
+          quantity: p.quantity,
+          unit: db?.unit || 'serving',
+          calories: db ? db.calories * p.quantity : 150 * p.quantity,
+          protein: db ? db.protein * p.quantity : 5 * p.quantity,
+          carbs: db ? db.carbs * p.quantity : 20 * p.quantity,
+          fats: db ? db.fats * p.quantity : 5 * p.quantity,
+        };
+      });
+    }
+    return [{ name: text, quantity: 1, unit: 'serving', calories: 150, protein: 5, carbs: 20, fats: 5 }];
+  }
+
+  const result = await apiFetch('/api/analyze-food', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+  return result.items || [];
+}
+
+export async function analyzeFoodImage(imageBase64: string, text?: string): Promise<AnalyzedFoodItem[]> {
+  if (!USE_API) {
+    // Fallback mock for local dev
+    return [
+      { name: 'Dal', quantity: 1, unit: 'bowl', calories: 150, protein: 9, carbs: 20, fats: 3 },
+      { name: 'Roti', quantity: 2, unit: 'piece', calories: 140, protein: 5, carbs: 30, fats: 1 },
+      { name: 'Sabzi', quantity: 1, unit: 'bowl', calories: 120, protein: 4, carbs: 15, fats: 5 },
+    ];
+  }
+
+  const result = await apiFetch('/api/analyze-food', {
+    method: 'POST',
+    body: JSON.stringify({ imageBase64, text }),
+  });
+  return result.items || [];
+}

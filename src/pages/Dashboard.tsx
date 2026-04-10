@@ -104,16 +104,14 @@ export default function Dashboard() {
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        {/* Progress ring + macros */}
+        {/* Progress rings + macros */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col items-center">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4 self-start">Calorie Balance</h2>
-            <div className="relative">
-              <ProgressRing value={totalCaloriesIn} max={targets.calories} size={180} strokeWidth={14} color="#22c55e" label="" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold text-gray-900">{remaining}</span>
-                <span className="text-xs text-gray-400">remaining</span>
-              </div>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-700 mb-5">Calorie Balance</h2>
+            <div className="flex justify-around items-end">
+              <ProgressRing value={totalCaloriesIn} max={targets.calories} size={110} strokeWidth={10} color="#22c55e" label="Eaten" />
+              <ProgressRing value={totalCaloriesOut} max={Math.max(totalCaloriesOut, 500)} size={110} strokeWidth={10} color="#f59e0b" label="Burned" />
+              <ProgressRing value={remaining} max={targets.calories} size={110} strokeWidth={10} color="#6366f1" label="Remaining" />
             </div>
           </div>
 
