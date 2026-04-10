@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
@@ -22,19 +23,20 @@ function AppRoutes() {
     );
   }
 
-  if (!profile) {
-    return <Onboarding />;
-  }
+  if (!profile) return <Onboarding />;
 
   return (
-    <div className="max-w-lg mx-auto min-h-screen bg-gray-50">
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/food" element={<FoodLog />} />
-        <Route path="/activity" element={<Activity />} />
-        <Route path="/coach" element={<Coach />} />
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 min-h-screen pb-20 lg:pb-0 overflow-y-auto">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/food" element={<FoodLog />} />
+          <Route path="/activity" element={<Activity />} />
+          <Route path="/coach" element={<Coach />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+      </main>
       <BottomNav />
     </div>
   );

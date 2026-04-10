@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, UtensilsCrossed, Dumbbell, MessageCircle, User } from 'lucide-react';
 
 const tabs = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/', icon: LayoutDashboard, label: 'Home' },
   { path: '/food', icon: UtensilsCrossed, label: 'Food' },
   { path: '/activity', icon: Dumbbell, label: 'Activity' },
   { path: '/coach', icon: MessageCircle, label: 'Coach' },
@@ -14,15 +14,15 @@ export default function BottomNav() {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
-      <div className="max-w-lg mx-auto flex justify-around py-2">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-50 safe-area-bottom">
+      <div className="flex justify-around py-2 px-1">
         {tabs.map(tab => {
           const active = location.pathname === tab.path;
           return (
             <button key={tab.path} onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${active ? 'text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${active ? 'text-brand-600' : 'text-gray-400'}`}
               aria-label={tab.label}>
-              <tab.icon size={22} strokeWidth={active ? 2.5 : 1.8} />
+              <tab.icon size={21} strokeWidth={active ? 2.4 : 1.7} />
               <span className="text-[10px] font-medium">{tab.label}</span>
             </button>
           );
