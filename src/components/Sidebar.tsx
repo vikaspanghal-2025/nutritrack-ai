@@ -13,8 +13,13 @@ const tabs = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, totalCaloriesIn, targets } = useApp();
+  const { profile, totalCaloriesIn, targets, selectedDate } = useApp();
   const pct = Math.min(Math.round((totalCaloriesIn / targets.calories) * 100), 100);
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === today;
+  const dateLabel = isToday
+    ? "Today's Progress"
+    : new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0">
@@ -33,7 +38,7 @@ export default function Sidebar() {
 
       {/* Quick stats */}
       <div className="px-5 py-4 border-b border-gray-100">
-        <p className="text-xs text-gray-400 mb-2">Today's Progress</p>
+        <p className="text-xs text-gray-400 mb-2">{dateLabel}</p>
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-700"
             style={{ width: `${pct}%` }} />

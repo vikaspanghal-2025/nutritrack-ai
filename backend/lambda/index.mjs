@@ -170,6 +170,70 @@ Rules:
       return respond(200, parsed);
     }
 
+    // ---- APPLE HEALTH SYNC (receives data from iOS Shortcut) ----
+    if (path === '/api/health-sync' && method === 'POST') {
+      const { activities: healthActivities, steps, activeCalories, syncToken } = body;
+      // syncToken is the user's ID embedded in the Shortcut
+      const syncUserId = syncToken || userId;
+      const date = new Date().toISOString().split('T')[0];
+      const results = [];
+
+      // Import activities (workouts)
+      if (healthActivities && Array.isArray(healthActivities)) {
+        for (const act of healthActivities) {
+          const id = `health-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const entry = {
+            id,
+            type: act.type || 'Workout',
+            duration: act.duration || 0,
+            caloriesBurned: act.calories || 0,
+            intensity: act.calories > 300 ? 'high' : act.calories > 150 ? 'moderate' : 'low',
+            timestamp: act.startDate || new Date().toISOString(),
+            source: 'healthkit',
+          };
+          await ddb.send(new PutCommand({
+            TableName: TABLE,
+            Item: { PK: `USER#${syncUserId}`, SK: `ACTIVITY#${date}#${id}`, data: entry, date, updatedAt: new Date().toISOString() },
+          }));
+          results.push(entry);
+        }
+      }
+
+      // Import active calories as a summary activity if no workouts
+      if (activeCalories && (!healthActivities || healthActivities.length === 0)) {
+        const id = `health-cal-${Date.now()}`;
+        const entry = {
+          id,
+          type: 'Active Calories',
+          duration: 0,
+          caloriesBurned: Math.round(activeCalories),
+          intensity: 'moderate',
+          timestamp: new Date().toISOString(),
+          source: 'healthkit',
+        };
+        await ddb.send(new PutCommand({
+          TableName: TABLE,
+          Item: { PK: `USER#${syncUserId}`, SK: `ACTIVITY#${date}#${id}`, data: entry, date, updatedAt: new Date().toISOString() },
+        }));
+        results.push(entry);
+      }
+
+      // Store steps as metadata
+      if (steps) {
+        await ddb.send(new PutCommand({
+          TableName: TABLE,
+          Item: { PK: `USER#${syncUserId}`, SK: `STEPS#${date}`, data: { steps, date }, updatedAt: new Date().toISOString() },
+        }));
+      }
+
+      return respond(200, { ok: true, imported: results.length, activities: results });
+    }
+
+    // ---- GET SYNC TOKEN (for Apple Shortcut setup) ----
+    if (path === '/api/sync-token' && method === 'GET') {
+      return respond(200, { syncToken: userId, apiUrl: `https://${event.requestContext?.domainName || 'jjt5po34g6.execute-api.us-east-1.amazonaws.com'}` });
+    }
+
     return respond(404, { error: 'Not found' });
   } catch (err) {
     console.error('Error:', err);
