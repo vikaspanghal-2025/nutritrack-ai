@@ -4,9 +4,9 @@ import MacroBar from '../components/MacroBar';
 import DateNav from '../components/DateNav';
 import { Flame, Zap, Apple, TrendingUp, Utensils, Dumbbell, Trophy } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { todayPST } from '../utils/dateUtils';
-import { getAllLogs } from '../utils/storage';
+import { fetchWeeklyLogs } from '../utils/api';
 
 const motivations = [
   "Every healthy meal is a step forward 💪",
@@ -28,20 +28,20 @@ export default function Dashboard() {
     { name: 'Fats', value: Math.max(totalFats * 9, 1), color: '#ef4444' },
   ];
 
-  const weekData = useMemo(() => {
-    const logs = getAllLogs();
-    const days: { day: string; calories: number; burned: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
-      const log = logs[key];
-      days.push({
-        day: d.toLocaleDateString('en', { weekday: 'short' }),
-        calories: log?.foods?.reduce((s: number, f: any) => s + f.calories, 0) || 0,
-        burned: log?.activities?.reduce((s: number, a: any) => s + a.caloriesBurned, 0) || 0,
-      });
-    }
-    return days;
+  const [weekData, setWeekData] = useState<{ day: string; calories: number; burned: number }[]>([]);
+
+  useEffect(() => {
+    fetchWeeklyLogs().then(logs => {
+      const days = logs.map(log => {
+        const d = new Date(log.date + 'T12:00:00');
+        return {
+          day: d.toLocaleDateString('en', { weekday: 'short' }),
+          calories: log.foods?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0,
+          burned: log.activities?.reduce((s: number, a: any) => s + (a.caloriesBurned || 0), 0) || 0,
+        };
+      }).reverse();
+      setWeekData(days);
+    }).catch(console.error);
   }, [foods, activities]);
 
   const mealBreakdown = useMemo(() => {
