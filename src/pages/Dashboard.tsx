@@ -6,7 +6,7 @@ import { Flame, Zap, Apple, TrendingUp, Utensils, Dumbbell, Trophy } from 'lucid
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useMemo, useState, useEffect } from 'react';
 import { todayPST } from '../utils/dateUtils';
-import { fetchWeeklyLogs } from '../utils/api';
+import { fetchTrendLogs } from '../utils/api';
 
 const motivations = [
   "Every healthy meal is a step forward 💪",
@@ -28,21 +28,26 @@ export default function Dashboard() {
     { name: 'Fats', value: Math.max(totalFats * 9, 1), color: '#ef4444' },
   ];
 
-  const [weekData, setWeekData] = useState<{ day: string; calories: number; burned: number }[]>([]);
+  const [trendData, setTrendData] = useState<{ day: string; calories: number; burned: number }[]>([]);
+  const [trendRange, setTrendRange] = useState<'week' | 'month'>('week');
 
   useEffect(() => {
-    fetchWeeklyLogs().then(logs => {
-      const days = logs.map(log => {
+    const days = trendRange === 'week' ? 7 : 30;
+    fetchTrendLogs(days).then(logs => {
+      const data = logs.map(log => {
         const d = new Date(log.date + 'T12:00:00');
+        const label = trendRange === 'week'
+          ? d.toLocaleDateString('en', { weekday: 'short' })
+          : d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
         return {
-          day: d.toLocaleDateString('en', { weekday: 'short' }),
+          day: label,
           calories: log.foods?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0,
           burned: log.activities?.reduce((s: number, a: any) => s + (a.caloriesBurned || 0), 0) || 0,
         };
       }).reverse();
-      setWeekData(days);
+      setTrendData(data);
     }).catch(console.error);
-  }, [foods, activities]);
+  }, [foods, activities, trendRange]);
 
   const mealBreakdown = useMemo(() => {
     const meals: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
@@ -150,12 +155,24 @@ export default function Dashboard() {
         {/* Weekly trend + meals */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-brand-600" /> Weekly Trend
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <TrendingUp size={16} className="text-brand-600" /> Calorie Trend
+              </h2>
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                <button onClick={() => setTrendRange('week')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${trendRange === 'week' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
+                  Week
+                </button>
+                <button onClick={() => setTrendRange('month')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${trendRange === 'month' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
+                  Month
+                </button>
+              </div>
+            </div>
             <div className="h-52">
               <ResponsiveContainer>
-                <AreaChart data={weekData}>
+                <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />

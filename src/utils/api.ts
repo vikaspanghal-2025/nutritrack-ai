@@ -92,19 +92,19 @@ export async function removeActivityApi(id: string, date?: string): Promise<void
   await apiFetch(`/api/activity/${id}?date=${d}`, { method: 'DELETE' });
 }
 
-// ---- Weekly logs ----
-export async function fetchWeeklyLogs(): Promise<DailyLog[]> {
+// ---- Trend logs ----
+export async function fetchTrendLogs(days: number = 7): Promise<DailyLog[]> {
   if (!USE_API) {
     const logs = getLocalLogs();
     const result: DailyLog[] = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
+      const key = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
       result.push({ date: key, foods: logs[key]?.foods || [], activities: logs[key]?.activities || [] });
     }
     return result;
   }
-  return apiFetch('/api/logs?days=7');
+  return apiFetch(`/api/logs?days=${days}`);
 }
 
 // ---- AI Food Analysis ----
