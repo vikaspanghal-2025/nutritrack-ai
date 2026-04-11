@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, Dumbbell, MessageCircle, User, Sparkles } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Dumbbell, MessageCircle, User, Sparkles, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 
 const tabs = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -14,6 +15,7 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, totalCaloriesIn, targets, selectedDate } = useApp();
+  const { user: authUser, signOut } = useAuth();
   const pct = Math.min(Math.round((totalCaloriesIn / targets.calories) * 100), 100);
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const isToday = selectedDate === today;
@@ -67,13 +69,20 @@ export default function Sidebar() {
       {/* User */}
       <div className="p-4 border-t border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">
-            {profile?.name?.charAt(0)?.toUpperCase() || '?'}
-          </div>
+          {authUser?.picture ? (
+            <img src={authUser.picture} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 font-bold text-sm">
+              {profile?.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800 truncate">{profile?.name || 'User'}</p>
-            <p className="text-[10px] text-gray-400 capitalize">{profile?.goal?.replace('_', ' ') || 'Set goal'}</p>
+            <p className="text-sm font-medium text-gray-800 truncate">{authUser?.name || profile?.name || 'User'}</p>
+            <p className="text-[10px] text-gray-400 truncate">{authUser?.email || ''}</p>
           </div>
+          <button onClick={signOut} className="text-gray-300 hover:text-red-400 p-1" title="Sign out">
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>
