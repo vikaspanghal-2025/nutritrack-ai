@@ -33,9 +33,29 @@ export default function Login() {
           <p className="text-sm text-gray-600 mb-6">Sign in to sync your data across all your devices</p>
           
           {GOOGLE_CLIENT_ID ? (
-            <div className="flex justify-center">
-              <div id="google-signin-btn" />
-            </div>
+            <>
+              <div className="flex justify-center">
+                <div id="google-signin-btn" />
+              </div>
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
+              <button onClick={() => {
+                const guestId = 'guest-' + crypto.randomUUID().slice(0, 8);
+                const guestUser = { email: guestId, name: 'Guest', picture: '', sub: guestId };
+                localStorage.setItem('nutritrack_google_user', JSON.stringify(guestUser));
+                localStorage.setItem('nutritrack_user_id', guestId);
+                window.location.reload();
+              }}
+                className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors">
+                Continue without signing in
+              </button>
+              <p className="text-[10px] text-gray-400 mt-2">Guest data won't sync across devices</p>
+            </>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-3">
