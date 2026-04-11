@@ -29,23 +29,47 @@ export default function Dashboard() {
   ];
 
   const [trendData, setTrendData] = useState<{ day: string; calories: number; burned: number }[]>([]);
-  const [trendRange, setTrendRange] = useState<'week' | 'month'>('week');
+  const [trendRange, setTrendRange] = useState<'week' | 'month' | 'year'>('week');
 
   useEffect(() => {
-    const days = trendRange === 'week' ? 7 : 30;
+    const days = trendRange === 'week' ? 7 : trendRange === 'month' ? 30 : 365;
     fetchTrendLogs(days).then(logs => {
-      const data = logs.map(log => {
-        const d = new Date(log.date + 'T12:00:00');
-        const label = trendRange === 'week'
-          ? d.toLocaleDateString('en', { weekday: 'short' })
-          : d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-        return {
-          day: label,
-          calories: log.foods?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0,
-          burned: log.activities?.reduce((s: number, a: any) => s + (a.caloriesBurned || 0), 0) || 0,
-        };
-      }).reverse();
-      setTrendData(data);
+      if (trendRange === 'year') {
+        // Aggregate by week for yearly view
+        const weeks: Record<string, { calories: number; burned: number; count: number }> = {};
+        logs.forEach(log => {
+          const d = new Date(log.date + 'T12:00:00');
+          // Get ISO week start (Monday)
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(d);
+          weekStart.setDate(diff);
+          const key = weekStart.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+          if (!weeks[key]) weeks[key] = { calories: 0, burned: 0, count: 0 };
+          weeks[key].calories += log.foods?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0;
+          weeks[key].burned += log.activities?.reduce((s: number, a: any) => s + (a.caloriesBurned || 0), 0) || 0;
+          weeks[key].count++;
+        });
+        const data = Object.entries(weeks).map(([day, v]) => ({
+          day,
+          calories: Math.round(v.calories / v.count),
+          burned: Math.round(v.burned / v.count),
+        }));
+        setTrendData(data);
+      } else {
+        const data = logs.map(log => {
+          const d = new Date(log.date + 'T12:00:00');
+          const label = trendRange === 'week'
+            ? d.toLocaleDateString('en', { weekday: 'short' })
+            : d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+          return {
+            day: label,
+            calories: log.foods?.reduce((s: number, f: any) => s + (f.calories || 0), 0) || 0,
+            burned: log.activities?.reduce((s: number, a: any) => s + (a.caloriesBurned || 0), 0) || 0,
+          };
+        }).reverse();
+        setTrendData(data);
+      }
     }).catch(console.error);
   }, [foods, activities, trendRange]);
 
@@ -160,14 +184,12 @@ export default function Dashboard() {
                 <TrendingUp size={16} className="text-brand-600" /> Calorie Trend
               </h2>
               <div className="flex bg-gray-100 rounded-lg p-0.5">
-                <button onClick={() => setTrendRange('week')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${trendRange === 'week' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
-                  Week
-                </button>
-                <button onClick={() => setTrendRange('month')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${trendRange === 'month' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
-                  Month
-                </button>
+                {(['week', 'month', 'year'] as const).map(r => (
+                  <button key={r} onClick={() => setTrendRange(r)}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${trendRange === r ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'}`}>
+                    {r}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="h-52">
