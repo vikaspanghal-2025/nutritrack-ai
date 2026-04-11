@@ -6,6 +6,10 @@ const ddb = DynamoDBDocumentClient.from(client);
 const TABLE = process.env.TABLE_NAME || 'NutriTrackData';
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'anthropic.claude-sonnet-4-20250514-v1:0';
 
+function todayPST() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+}
+
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
@@ -82,36 +86,36 @@ export async function handler(event) {
 
     // ---- FOOD LOG ----
     if (path === '/api/food' && method === 'POST') {
-      const date = body.date || new Date().toISOString().split('T')[0];
+      const date = body.date || todayPST();
       await ddb.send(new PutCommand({ TableName: TABLE, Item: { PK: `USER#${userId}`, SK: `FOOD#${date}#${body.id}`, data: body, date, updatedAt: new Date().toISOString() } }));
       return respond(201, { ok: true, id: body.id });
     }
     if (path === '/api/food' && method === 'GET') {
-      const date = event.queryStringParameters?.date || new Date().toISOString().split('T')[0];
+      const date = event.queryStringParameters?.date || todayPST();
       const result = await ddb.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)', ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':sk': `FOOD#${date}` } }));
       return respond(200, (result.Items || []).map(i => i.data));
     }
     if (path.startsWith('/api/food/') && method === 'DELETE') {
       const foodId = path.split('/api/food/')[1];
-      const date = event.queryStringParameters?.date || new Date().toISOString().split('T')[0];
+      const date = event.queryStringParameters?.date || todayPST();
       await ddb.send(new DeleteCommand({ TableName: TABLE, Key: { PK: `USER#${userId}`, SK: `FOOD#${date}#${foodId}` } }));
       return respond(200, { ok: true });
     }
 
     // ---- ACTIVITY LOG ----
     if (path === '/api/activity' && method === 'POST') {
-      const date = body.date || new Date().toISOString().split('T')[0];
+      const date = body.date || todayPST();
       await ddb.send(new PutCommand({ TableName: TABLE, Item: { PK: `USER#${userId}`, SK: `ACTIVITY#${date}#${body.id}`, data: body, date, updatedAt: new Date().toISOString() } }));
       return respond(201, { ok: true, id: body.id });
     }
     if (path === '/api/activity' && method === 'GET') {
-      const date = event.queryStringParameters?.date || new Date().toISOString().split('T')[0];
+      const date = event.queryStringParameters?.date || todayPST();
       const result = await ddb.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)', ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':sk': `ACTIVITY#${date}` } }));
       return respond(200, (result.Items || []).map(i => i.data));
     }
     if (path.startsWith('/api/activity/') && method === 'DELETE') {
       const actId = path.split('/api/activity/')[1];
-      const date = event.queryStringParameters?.date || new Date().toISOString().split('T')[0];
+      const date = event.queryStringParameters?.date || todayPST();
       await ddb.send(new DeleteCommand({ TableName: TABLE, Key: { PK: `USER#${userId}`, SK: `ACTIVITY#${date}#${actId}` } }));
       return respond(200, { ok: true });
     }
@@ -203,8 +207,8 @@ Rules:
 
       const { activities: healthActivities, steps, activeCalories, syncToken } = body;
       const syncUserId = syncToken || userId;
-      // Use PST for date key
-      const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+      // Use date from body if provided (Shortcut sends PST date), otherwise compute PST
+      const date = body.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
       const results = [];
       const debug = { rawSteps: steps, rawCalories: activeCalories, parsedSteps: 0, parsedCalories: 0 };
 
