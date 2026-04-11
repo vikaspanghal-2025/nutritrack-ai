@@ -39,10 +39,34 @@ export async function handler(event) {
 
   try {
     if (event.body) {
-      body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
+      const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
+      try {
+        body = JSON.parse(raw);
+      } catch (jsonErr) {
+        // Try to extract numbers from messy Shortcuts output
+        // Shortcuts might send something like: {"syncToken":"abc","steps":5,432 steps,"activeCalories":342.1 kcal}
+        const cleaned = raw
+          .replace(/(\d),(\d)/g, '$1$2')           // remove comma in numbers like 5,432
+          .replace(/(\d+\.?\d*)\s*[a-zA-Z]+/g, '$1') // remove units like "steps", "kcal", "cal"
+          .replace(/:\s*\./g, ': 0.')               // fix :.5 → 0.5
+          .trim();
+        try {
+          body = JSON.parse(cleaned);
+        } catch {
+          // Last resort: try to extract syncToken and numbers
+          const tokenMatch = raw.match(/"syncToken"\s*:\s*"([^"]+)"/);
+          const stepsMatch = raw.match(/"steps"\s*:\s*"?(\d[\d,]*\.?\d*)/);
+          const calMatch = raw.match(/"activeCalories"\s*:\s*"?(\d[\d,]*\.?\d*)/);
+          body = {
+            syncToken: tokenMatch?.[1] || '',
+            steps: stepsMatch ? parseFloat(stepsMatch[1].replace(/,/g, '')) : 0,
+            activeCalories: calMatch ? parseFloat(calMatch[1].replace(/,/g, '')) : 0,
+          };
+        }
+      }
     }
   } catch (e) {
-    return respond(400, { error: 'Invalid JSON body' });
+    return respond(400, { error: 'Could not parse request body', detail: e.message });
   }
 
   try {
