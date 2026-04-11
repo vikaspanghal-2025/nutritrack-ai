@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserProfile, FoodEntry, ActivityEntry, NutritionTarget } from '../types';
 import { calculateTargets } from '../utils/nutrition';
+import { todayPST } from '../utils/dateUtils';
 import * as api from '../utils/api';
-
-function todayStr() { return new Date().toISOString().split('T')[0]; }
 
 interface AppState {
   profile: UserProfile | null;
@@ -35,7 +34,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
   const [targets, setTargets] = useState<NutritionTarget>(defaultTargets);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDateState] = useState(todayStr());
+  const [selectedDate, setSelectedDateState] = useState(todayPST());
 
   async function loadDateData(date: string) {
     try {
@@ -51,7 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const p = await api.fetchProfile();
         setProfileState(p);
         if (p) setTargets(calculateTargets(p));
-        await loadDateData(todayStr());
+        await loadDateData(todayPST());
       } catch (e) { console.error('Init error:', e); }
       finally { setLoading(false); }
     })();

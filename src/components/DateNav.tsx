@@ -1,13 +1,12 @@
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { todayPST, formatDateLabel } from '../utils/dateUtils';
 
 export default function DateNav() {
   const { selectedDate, setSelectedDate } = useApp();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayPST();
   const isToday = selectedDate === today;
-
-  const dateObj = new Date(selectedDate + 'T12:00:00');
-  const label = isToday ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const label = formatDateLabel(selectedDate);
 
   function shift(days: number) {
     const d = new Date(selectedDate + 'T12:00:00');

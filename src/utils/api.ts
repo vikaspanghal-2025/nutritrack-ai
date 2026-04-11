@@ -18,7 +18,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
-function todayKey(): string { return new Date().toISOString().split('T')[0]; }
+function todayKey(): string { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
 
 function getLocalLogs(): Record<string, { foods: FoodEntry[]; activities: ActivityEntry[] }> {
   return JSON.parse(localStorage.getItem('nutritrack_logs') || '{}');

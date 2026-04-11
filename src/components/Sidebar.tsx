@@ -15,7 +15,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { profile, totalCaloriesIn, targets, selectedDate } = useApp();
   const pct = Math.min(Math.round((totalCaloriesIn / targets.calories) * 100), 100);
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const isToday = selectedDate === today;
   const dateLabel = isToday
     ? "Today's Progress"

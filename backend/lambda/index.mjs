@@ -196,13 +196,44 @@ Rules:
 
     // ---- APPLE HEALTH SYNC (receives data from iOS Shortcut) ----
     if (path === '/api/health-sync' && method === 'POST') {
-      const { activities: healthActivities, steps, activeCalories, syncToken } = body;
-      // syncToken is the user's ID embedded in the Shortcut
-      const syncUserId = syncToken || userId;
-      const date = new Date().toISOString().split('T')[0];
-      const results = [];
+      // Log the raw body for debugging
+      const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body;
+      console.log('Health sync raw body:', rawBody);
+      console.log('Health sync parsed body:', JSON.stringify(body));
 
-      // Import activities (workouts)
+      const { activities: healthActivities, steps, activeCalories, syncToken } = body;
+      const syncUserId = syncToken || userId;
+      // Use PST for date key
+      const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+      const results = [];
+      const debug = { rawSteps: steps, rawCalories: activeCalories, parsedSteps: 0, parsedCalories: 0 };
+
+      // Parse numbers that might have units or commas
+      const parsedSteps = typeof steps === 'number' ? steps : parseFloat(String(steps || '0').replace(/[^0-9.]/g, '')) || 0;
+      const parsedCalories = typeof activeCalories === 'number' ? activeCalories : parseFloat(String(activeCalories || '0').replace(/[^0-9.]/g, '')) || 0;
+      debug.parsedSteps = parsedSteps;
+      debug.parsedCalories = parsedCalories;
+
+      // Always import active calories if > 0
+      if (parsedCalories > 0) {
+        const id = `health-cal-${Date.now()}`;
+        const entry = {
+          id,
+          type: 'Active Calories (Apple Health)',
+          duration: 0,
+          caloriesBurned: Math.round(parsedCalories),
+          intensity: parsedCalories > 300 ? 'high' : parsedCalories > 150 ? 'moderate' : 'low',
+          timestamp: new Date().toISOString(),
+          source: 'healthkit',
+        };
+        await ddb.send(new PutCommand({
+          TableName: TABLE,
+          Item: { PK: `USER#${syncUserId}`, SK: `ACTIVITY#${date}#${id}`, data: entry, date, updatedAt: new Date().toISOString() },
+        }));
+        results.push(entry);
+      }
+
+      // Import individual workouts if provided
       if (healthActivities && Array.isArray(healthActivities)) {
         for (const act of healthActivities) {
           const id = `health-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -223,34 +254,15 @@ Rules:
         }
       }
 
-      // Import active calories as a summary activity if no workouts
-      if (activeCalories && (!healthActivities || healthActivities.length === 0)) {
-        const id = `health-cal-${Date.now()}`;
-        const entry = {
-          id,
-          type: 'Active Calories',
-          duration: 0,
-          caloriesBurned: Math.round(activeCalories),
-          intensity: 'moderate',
-          timestamp: new Date().toISOString(),
-          source: 'healthkit',
-        };
+      // Store steps
+      if (parsedSteps > 0) {
         await ddb.send(new PutCommand({
           TableName: TABLE,
-          Item: { PK: `USER#${syncUserId}`, SK: `ACTIVITY#${date}#${id}`, data: entry, date, updatedAt: new Date().toISOString() },
-        }));
-        results.push(entry);
-      }
-
-      // Store steps as metadata
-      if (steps) {
-        await ddb.send(new PutCommand({
-          TableName: TABLE,
-          Item: { PK: `USER#${syncUserId}`, SK: `STEPS#${date}`, data: { steps, date }, updatedAt: new Date().toISOString() },
+          Item: { PK: `USER#${syncUserId}`, SK: `STEPS#${date}`, data: { steps: parsedSteps, date }, updatedAt: new Date().toISOString() },
         }));
       }
 
-      return respond(200, { ok: true, imported: results.length, activities: results });
+      return respond(200, { ok: true, imported: results.length, activities: results, debug });
     }
 
     // ---- GET SYNC TOKEN (for Apple Shortcut setup) ----

@@ -5,6 +5,7 @@ import DateNav from '../components/DateNav';
 import { Flame, Zap, Apple, TrendingUp, Utensils, Dumbbell, Trophy } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useMemo } from 'react';
+import { todayPST } from '../utils/dateUtils';
 import { getAllLogs } from '../utils/storage';
 
 const motivations = [
@@ -18,7 +19,7 @@ const motivations = [
 export default function Dashboard() {
   const { profile, targets, totalCaloriesIn, totalCaloriesOut, totalProtein, totalCarbs, totalFats, foods, activities, selectedDate } = useApp();
   const remaining = Math.max(targets.calories - totalCaloriesIn + totalCaloriesOut, 0);
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === todayPST();
   const motivation = motivations[new Date().getDay() % motivations.length];
 
   const macroData = [
